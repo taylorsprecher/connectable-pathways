@@ -1,0 +1,11 @@
+{
+  "name": "connectable-pathways",
+  "private": true,
+  "scripts": {
+    "api:dev": "cd apps/api && npm run start:dev",
+    "api:build": "cd apps/api && npm run build",
+    "api:start": "cd apps/api && npm run start",
+    "mobile:pubget": "cd apps/mobile && flutter pub get",
+    "mobile:run": "cd apps/mobile && flutter run"
+  }
+}
