@@ -26,6 +26,13 @@ A full-stack MVP for creating, validating, and executing connectable pathways us
 - Queue: Redis + BullMQ
 - Local infra: Docker Compose
 
+## Requirements
+
+- Node.js 20+
+- npm
+- Flutter SDK
+- Docker Desktop or Docker Engine
+
 ## Quick start
 
 ### 1) Start dependencies
@@ -68,10 +75,16 @@ curl -X POST http://localhost:3000/pathways \
   }'
 ```
 
+### Fetch all pathways
+
+```bash
+curl http://localhost:3000/pathways
+```
+
 ### Validate pathway
 
 ```bash
-curl http://localhost:3000/pathways/:id/validate
+curl -X POST http://localhost:3000/pathways/:id/validate
 ```
 
 ### Run pathway
@@ -100,4 +113,4 @@ connectable-pathways/
 
 ## Notes
 
-This is an MVP intended for local development and extension. The in-memory pathway store is used by default for fast iteration, while Prisma is scaffolded for production-ready persistence.
+This is a working MVP intended for local development and extension. The current backend operates with an in-memory graph store to keep the application runnable without external setup while the Prisma schema remains available for future persistence work.
