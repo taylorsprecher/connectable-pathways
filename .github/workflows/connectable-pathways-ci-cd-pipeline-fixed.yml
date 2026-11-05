@@ -1,0 +1,57 @@
+name: CI/CD Pipeline
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+permissions:
+  id-token: write
+  contents: read
+
+jobs:
+  build-and-test:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Install API Dependencies
+        working-directory: apps/api
+        run: npm install
+
+      - name: Generate Prisma Client
+        working-directory: apps/api
+        run: npm run prisma:generate
+
+      - name: Build API
+        working-directory: apps/api
+        run: npm run build
+
+  deploy:
+    needs: build-and-test
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Configure AWS Credentials (OIDC)
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: arn:aws:iam::123456789012:role/my-github-actions-role # Replace with your IAM Role ARN
+          aws-region: us-west-2
+
+      - name: Deploy to AWS CloudFormation
+        uses: aws-actions/aws-cloudformation-github-deploy@v1
+        with:
+          name: my-application-stack # Replace with your CloudFormation Stack Name
+          template: template.yaml     # Replace with your template file path
+          no-fail-on-empty-changeset: "1"
+          # Optional parameter overrides if your template expects parameters:
+          # parameter-overrides: "Environment=production,InstanceType=t3.micro"
