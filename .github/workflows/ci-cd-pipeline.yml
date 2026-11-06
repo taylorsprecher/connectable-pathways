@@ -21,14 +21,20 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: 20
+          cache: 'npm'
+          cache-dependency-path: apps/api/package-lock.json
 
       - name: Install API Dependencies
         working-directory: apps/api
-        run: npm install
+        run: npm ci
 
       - name: Generate Prisma Client
         working-directory: apps/api
         run: npm run prisma:generate
+
+      - name: Test API
+        working-directory: apps/api
+        run: npm test
 
       - name: Build API
         working-directory: apps/api
