@@ -1,0 +1,70 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: >-
+  connectable-pathways v1 - a single EC2 instance running the NestJS API,
+  PostgreSQL and Redis via Docker Compose. At boot the instance clones the
+  public GitHub repo and builds the API image on the box.
+
+Parameters:
+  InstanceType:
+    Type: String
+    Default: t3.small
+    AllowedValues:
+      - t3.micro
+      - t3.small
+      - t3.medium
+    Description: Instance size for the API box.
+  LatestAmiId:
+    Type: AWS::SSM::Parameter::Value<AWS::EC2::Image::Id>
+    Default: /aws/service/canonical/ubuntu/server/24.04/stable/current/amd64/hvm/ebs-gp3/ami-id
+    Description: Ubuntu 24.04 LTS AMI, resolved from the public SSM parameter.
+  RepoUrl:
+    Type: String
+    Default: https://github.com/taylorsprecher/connectable-pathways.git
+    Description: Public repo the instance clones at boot.
+
+Resources:
+  ApiSecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: connectable-pathways API - HTTP on port 3000
+      SecurityGroupIngress:
+        - IpProtocol: tcp
+          FromPort: 3000
+          ToPort: 3000
+          CidrIp: 0.0.0.0/0
+
+  ApiInstance:
+    Type: AWS::EC2::Instance
+    Properties:
+      InstanceType: !Ref InstanceType
+      ImageId: !Ref LatestAmiId
+      SecurityGroupIds:
+        - !Ref ApiSecurityGroup
+      BlockDeviceMappings:
+        - DeviceName: /dev/sda1
+          Ebs:
+            VolumeSize: 20
+            VolumeType: gp3
+      Tags:
+        - Key: Name
+          Value: connectable-pathways-api
+      UserData:
+        Fn::Base64: !Sub |
+          #!/bin/bash
+          set -eux
+          apt-get update
+          DEBIAN_FRONTEND=noninteractive apt-get install -y docker.io docker-compose-v2 git openssl
+          systemctl enable --now docker
+          git clone ${RepoUrl} /opt/app
+          cd /opt/app
+          DBPW=$(openssl rand -hex 24)
+          printf 'POSTGRES_USER=pathways\nPOSTGRES_PASSWORD=%s\nPOSTGRES_DB=pathways\nDATABASE_URL=postgresql://pathways:%s@db:5432/pathways\n' "$DBPW" "$DBPW" > .env
+          docker compose -f docker-compose.prod.yml up -d --build
+
+Outputs:
+  ApiUrl:
+    Description: Base URL of the deployed API
+    Value: !Sub 'http://${ApiInstance.PublicDnsName}:3000'
+  InstanceId:
+    Description: EC2 instance running the API
+    Value: !Ref ApiInstance
